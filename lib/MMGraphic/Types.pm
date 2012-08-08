@@ -44,7 +44,7 @@ coerce 'IMImage'
 			# TODO: co-erce from URL using LWP/GET ?
 			my $im = Image::Magick->new();
 			$r = $im->Read( $_ );
-			croak $r if $r;
+			croak($r) if $r;
 			$im;
 			}
 	=> from 'MMGraphicImage'
@@ -62,7 +62,7 @@ coerce 'MMGraphicImage'
 			# TODO: co-erce from URL using LWP/GET ?
 			my $im = Image::Magick->new();
 			$r = $im->Read( $_ );
-			croak $r if $r;
+			croak($r) if $r;
 			MMGraphic->new( image => $im );
 			}
 	=> from 'IMImage'

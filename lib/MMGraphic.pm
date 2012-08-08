@@ -120,7 +120,7 @@ from the file.
 method load_image (Str $file_name) {
 	my $im = Image::Magick->new();
 	$r = $im->Read( $file_name );
-	croak $r if $r;
+	croak($r) if $r;
 	$self->image( $im );
 	return;
 }
@@ -133,7 +133,7 @@ Saves the current C<image> to a named file.
 
 method save_image (Str $file_name) {
 	$r = $self->image->Write( $file_name );
-	croak $r if $r;
+	croak($r) if $r;
 	return;
 }
 
@@ -205,7 +205,7 @@ method composite (
 	my $result_im = $self->image->Clone;
 
 	$r = $result_im->Composite( image => $src_graphic->image, %options );
-	croak $r if $r;
+	croak($r) if $r;
 
 	# Dealing with opacity whilst respecting compose choice and
 	# potential transparency in the final image is complicated. Effectively
@@ -217,28 +217,28 @@ method composite (
 		my $temp_mask_im = $result_layer_im->Clone;
 		$temp_mask_im->Color( "rgb($opacity\%, $opacity\%, $opacity\%)" );
 		$temp_mask_im->Set(alpha=>"Off");
- 		croak $r if $r;
+ 		croak($r) if $r;
 
 		my $combined_mask = $result_layer_im->Clone;
-		croak $r if $r;
+		croak($r) if $r;
 
 		$r = $combined_mask->Separate( channel => 'Opacity' );
-		croak $r if $r;
+		croak($r) if $r;
 
 		$r = $combined_mask->Negate();
-		croak $r if $r;
+		croak($r) if $r;
 
 		$r = $combined_mask->Composite( image => $temp_mask_im, compose => 'Multiply' );
-		croak $r if $r;
+		croak($r) if $r;
 
 		$combined_mask->Set(alpha=>"Off");
-		croak $r if $r;
+		croak($r) if $r;
 
 		$r = $result_layer_im->Composite( image => $combined_mask, compose => 'CopyOpacity'  );
-		croak $r if $r;
+		croak($r) if $r;
 
 		$r = $result_im->Composite( image => $result_layer_im );
-		croak $r if $r;
+		croak($r) if $r;
 	}
 
 	return $flatten ? $self->_flatten( $result_im ) : __PACKAGE__->new( image => $result_im );
@@ -314,43 +314,43 @@ method emboss (
 	my $result_im = $self->image->Clone();
 
 	$r = $result_im->Set( 'virtual-pixel' => 'Tile' );
-	croak $r if $r;
+	croak($r) if $r;
 
 	$r = $result_im->Blur( sigma => $blur  );
-	croak $r if $r;
+	croak($r) if $r;
 
 	$r = $result_im->Shade( geometry => $theta . 'x21.78', gray => 'true' );
-	croak $r if $r;
+	croak($r) if $r;
 
 	$r = $result_im->ContrastStretch( '0%' );
-	croak $r if $r;
+	croak($r) if $r;
 
 	$r = $result_im->SigmoidalContrast( 'mid-point' => 0.5 * $result_im->QuantumRange, contrast => $contrast );
-	croak $r if $r;
+	croak($r) if $r;
 
 	my $opacity = int( 100 - $mix ) . '%';
 	$r = $result_im->Colorize( fill => 'grey50', opacity => $opacity );
-	croak $r if $r;
+	croak($r) if $r;
 
 	if ( $valley_darken ) {
 		my $valley_mask_im = $self->image->Clone();
 		$r = $valley_mask_im->Set( 'virtual-pixel' => 'Tile' );
-		croak $r if $r;
+		croak($r) if $r;
 
 		$r = $valley_mask_im->Negate();
-		croak $r if $r;
+		croak($r) if $r;
 
 		$r = $valley_mask_im->Blur( sigma => $valley_blur );
-		croak $r if $r;
+		croak($r) if $r;
 
 		my $valley_darken_im = $self->image->Clone();
 		$r = $valley_darken_im->Colorize( fill => 'black', opacity => '100%' );
-		croak $r if $r;
+		croak($r) if $r;
 
 		my $darken_opacity = int( $valley_darken ) . '%';
 		$r = $result_im->Composite( image => $valley_darken_im, mask => $valley_mask_im,
 			opacity => $darken_opacity, compose => 'Overlay' );
-		croak $r if $r;
+		croak($r) if $r;
 	}
 
 	return $flatten ? $self->_flatten( $result_im ) : __PACKAGE__->new( image => $result_im );
@@ -404,22 +404,22 @@ method apply_mask (
 
 	if ( $use_alpha ) {
 		$r = $mask_im->Separate( channel => 'Opacity' );
-		croak $r if $r;
+		croak($r) if $r;
 		$r = $mask_im->Negate();
-		croak $r if $r;
+		croak($r) if $r;
 	} else {
 		$mask_im->Set(alpha=>"Off");
- 		croak $r if $r;
+ 		croak($r) if $r;
 	}
 
 	if ($negate) {
 		$r = $mask_im->Negate();
-		croak $r if $r;
+		croak($r) if $r;
 	}
 
 	if ($feather) {
 		$r = $mask_im->Blur( sigma => $feather );
-		croak $r if $r;
+		croak($r) if $r;
 	}
 
 	# Create a combined mask which multiplies both sets of alpha channels
@@ -427,25 +427,25 @@ method apply_mask (
 	#     Mask from $mask is either as supplied or an extract of the alpha channel
 
 	my $combined_mask = $self->image->Clone;
-	croak $r if $r;
+	croak($r) if $r;
 
 	$r = $combined_mask->Separate( channel => 'Opacity' );
-	croak $r if $r;
+	croak($r) if $r;
 
 	$r = $combined_mask->Negate();
-	croak $r if $r;
+	croak($r) if $r;
 
 	$r = $combined_mask->Composite( image => $mask_im, compose => 'Multiply' );
-	croak $r if $r;
+	croak($r) if $r;
 
 	$combined_mask->Set(alpha=>"Off");
-	croak $r if $r;
+	croak($r) if $r;
 
 	my $result_im = $self->image->Clone;
-	croak $r if $r;
+	croak($r) if $r;
 
 	$r = $result_im->Composite( image => $combined_mask, compose => 'CopyOpacity'  );
-	croak $r if $r;
+	croak($r) if $r;
 
 	return $flatten ? $self->_flatten( $result_im ) : __PACKAGE__->new( image => $result_im );
 }
@@ -520,31 +520,31 @@ method drop_shadow (
 	} else {
 		my $sized_im = $orig->Clone();
 		$r = $sized_im->Color( $shadow_colour );
-		croak $r if $r;
+		croak($r) if $r;
 		$sg = __PACKAGE__->new( image => $sized_im );
 	}
 
 	# Create shadow mask based on object's opacity
 	$sm = $orig->Clone();
 	$r = $sm->Separate( channel => 'Opacity' );
-	croak $r if $r;
+	croak($r) if $r;
 	$r = $sm->Negate();
-	croak $r if $r;
+	croak($r) if $r;
 	$r = $sm->Set( 'virtual-pixel' => 'Edge' );
-	croak $r if $r;
+	croak($r) if $r;
 
 	# Enlarge shadow mask by blurring and applying strong contrast
 	$r = $sm->Blur( sigma => $enlarge );
-	croak $r if $r;
+	croak($r) if $r;
 	$r = $sm->SigmoidalContrast(
 		'mid-point' => 0.2 * $sm->QuantumRange,
 		contrast => 100 );
-	croak $r if $r;
+	croak($r) if $r;
 
 	# Reduce shadow strength
 	my $darken_opacity = int( 100 - $opacity ) . '%';
 	$r = $sm->Colorize( fill => 'black', opacity => $darken_opacity ) if ($opacity < 100);
-	croak $r if $r;
+	croak($r) if $r;
 
 	# Calculate shadow
 	$sg->apply_mask( graphic => $sm, feather => $blur, flatten => 1 );
@@ -628,7 +628,7 @@ method cut_shape (
 
 	my $tx_crop = $self->image->Clone();
 	$r = $tx_crop->Crop( geometry => _arrayref_to_imgeo( $texture_bounds ) );
-	croak $r if $r;
+	croak($r) if $r;
 
 	my $shape_im = _image_rect( @{$normalised_bounds->[1]} );
 
@@ -641,7 +641,7 @@ method cut_shape (
 			antialias => 'true',
 			stroke => $edge_colour,
 			);
-		croak $r if $r;
+		croak($r) if $r;
 	} else {
 		$r = $shape_im->Draw(
 			primitive => $primitive,
@@ -649,7 +649,7 @@ method cut_shape (
 			points => $draw_pts_txt,
 			antialias => 'true',
 			);
-		croak $r if $r;
+		croak($r) if $r;
 	}
 
 	return $flatten ? $self->_flatten( $shape_im ) : __PACKAGE__->new( image => $shape_im );
@@ -775,9 +775,9 @@ sub _image_rect {
 	my $blank = Image::Magick->new();
 	$blank->Set( size => "${w}x${h}" );
 	$r = $blank->ReadImage( $fill );
-	croak $r if $r;
+	croak($r) if $r;
 	$r = $blank->Set( "background", "rgba(255,255,255,0)" );
-	croak $r if $r;
+	croak($r) if $r;
 	return $blank;
 }
 
