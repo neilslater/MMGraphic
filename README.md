@@ -1,10 +1,24 @@
 MMGraphic
 ==========
 
-MMGraphic provides some useful high-level graphics commands based on 
-Image::Magick. It does not "wrap" Image::Magic, but does make it easier
-to do one or two things.
+MMGraphic is a Perl module that provides some useful high-level graphics 
+commands based on Image::Magick. It does not fully "wrap" Image::Magic, 
+but does make it easier to do one or two things.
 
+For example, MMGraphic will combine three images, a background, an overlay
+and a greyscale mask for the overlay, with some general transparency:
+
+  my $bg = MMGraphic->new( image => '/images/background.jpg' );
+  my $over = MMGraphic->new( image => '/images/overlay.png' );
+  my $mask = MMGraphic->new( image => '/images/mask.jpg' );
+  
+  $bg->composite( flatten => 1, graphic => $over, mask => { graphic => $mask }, opacity => 80 );
+  $bg->save_image( '/images/combined.jpg' );
+  
+The example should work as expected whether or not the overlay image
+has an alpha channel, making this standard piece of graphic combination
+a little easier to manage than when using Image::Magick directly.
+  
 INSTALL IMAGE MAGICK BEFORE INSTALLING MMGraphic
 ================================================
 
