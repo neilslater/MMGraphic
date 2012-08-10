@@ -11,7 +11,7 @@ use MMGraphic;
 use Image::Magick;
 
 my %graphic_of = (
-        bg => MMGraphic->new( image => catfile( $FindBin::Bin, '04_images', 'background.jpg' ) ),
+    bg => MMGraphic->new( image => catfile( $FindBin::Bin, '04_images', 'background.jpg' ) ),
 	fs => MMGraphic->new( image => catfile( $FindBin::Bin, '04_images', 'fancy_shadow.png' ) ),
 	a => MMGraphic->new( image =>  catfile( $FindBin::Bin, '04_images', 'a_object.png' ) ),
 	b => MMGraphic->new( image =>  catfile( $FindBin::Bin, '04_images', 'b_object.png' ) ),
@@ -108,7 +108,7 @@ sub create_graphic {
 
 sub cmp_image {
 	my ( $result_img, $expect_img, $fuzz_percent, $test_name ) = @_;
-	my $difference_img = $expect_img->Compare( image => $result_img, metric=>'rmse' );
+	my $difference_img = $expect_img->Compare( image => $result_img->image, metric=>'rmse' );
 	return if ok( $difference_img->Get('error') < $fuzz_percent/100, $test_name );
   	return $difference_img;
 }

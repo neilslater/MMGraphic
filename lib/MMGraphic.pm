@@ -3,6 +3,7 @@ use Moose;
 use Carp;
 use MMGraphic::Types;
 
+use MMGraphic::IM;
 use Image::Magick;
 use List::AllUtils qw(min max);
 use MooseX::Method::Signatures;
@@ -10,7 +11,7 @@ use MooseX::Method::Signatures;
 my $r; # Temp holder for Image::Magick responses . . .
 
 our $AUTHOR = 'Neil Slater';
-our $VERSION = '0.1';
+our $VERSION = '0.2';
 
 =head1 NAME
 
@@ -40,14 +41,14 @@ Please see http://www.imagemagick.org/ for details.
 
 =head2 image
 
-An L<Image::Magick> image.
+A L<MMGraphic::IM> wrapper object to L<Image::Magic>.
 
 You can set the value using a scalar file path, or another MMGraphic object
 (for both of these cases, MMGraphic creates a new L<Image::Magick> object).
 
 I<Warning>! MMGraphic does not check for multiple references to the same
-Image::Magick object. Unpredictable things may happen if you instantiate
-multiple MMGraphic objects with the exact same L<Image::Magick> object and
+L<MMGraphic::IM> object. Unpredictable things may happen if you instantiate
+multiple MMGraphic objects with the exact same L<MMGraphic::IM> object and
 then process them differently.
 
 If you want to have multiple MMGraphic objects initialised from the same base
@@ -58,8 +59,8 @@ MMGraphic objects. Alternatively, you can make use of the C<clone> method.
 
 has 'image' => (
 	is => 'rw',
-	isa => 'IMImage',
-	default => sub { Image::Magick->new();},
+    isa => 'MMGraphicIMWrapper',
+	default => sub { MMGraphic::IM->new();},
 	coerce => 1,
 );
 
@@ -102,12 +103,12 @@ A scalar path to an image file (loaded using L<Image::Magick>'s C<Read> method).
 =head2 clone
 
 Returns a copy of the current object, containing a copy of the
-Image::Magick image.
+MMGraphic::IM image.
 
 =cut
 
 method clone {
-	return __PACKAGE__->new( image => $self );
+	return __PACKAGE__->new( image => $self->image->Clone );
 }
 
 =head2 load_image( $filename )
@@ -118,7 +119,7 @@ from the file.
 =cut
 
 method load_image (Str $file_name) {
-	my $im = Image::Magick->new();
+	my $im = MMGraphic::IM->new();
 	$r = $im->Read( $file_name );
 	croak($r) if $r;
 	$self->image( $im );
@@ -204,7 +205,7 @@ method composite (
 
 	my $result_im = $self->image->Clone;
 
-	$r = $result_im->Composite( image => $src_graphic->image, %options );
+	$r = $result_im->Composite( image => $src_graphic->image->image, %options );
 	croak($r) if $r;
 
 	# Dealing with opacity whilst respecting compose choice and
@@ -228,16 +229,16 @@ method composite (
 		$r = $combined_mask->Negate();
 		croak($r) if $r;
 
-		$r = $combined_mask->Composite( image => $temp_mask_im, compose => 'Multiply' );
+		$r = $combined_mask->Composite( image => $temp_mask_im->image, compose => 'Multiply' );
 		croak($r) if $r;
 
 		$combined_mask->Set(alpha=>"Off");
 		croak($r) if $r;
 
-		$r = $result_layer_im->Composite( image => $combined_mask, compose => 'CopyOpacity'  );
+		$r = $result_layer_im->Composite( image => $combined_mask->image, compose => 'CopyOpacity'  );
 		croak($r) if $r;
 
-		$r = $result_im->Composite( image => $result_layer_im );
+		$r = $result_im->Composite( image => $result_layer_im->image );
 		croak($r) if $r;
 	}
 
@@ -348,7 +349,7 @@ method emboss (
 		croak($r) if $r;
 
 		my $darken_opacity = int( $valley_darken ) . '%';
-		$r = $result_im->Composite( image => $valley_darken_im, mask => $valley_mask_im,
+		$r = $result_im->Composite( image => $valley_darken_im->image, mask => $valley_mask_im->image,
 			opacity => $darken_opacity, compose => 'Overlay' );
 		croak($r) if $r;
 	}
@@ -394,7 +395,7 @@ If supplied the mask is blurred by this amount before use.
 =cut
 
 method apply_mask (
-	IMImage :$graphic! does coerce,
+    MMGraphicIMWrapper :$graphic! does coerce,
 	Bool :$flatten,
 	Bool :$use_alpha,
 	Bool :$negate,
@@ -435,7 +436,7 @@ method apply_mask (
 	$r = $combined_mask->Negate();
 	croak($r) if $r;
 
-	$r = $combined_mask->Composite( image => $mask_im, compose => 'Multiply' );
+	$r = $combined_mask->Composite( image => $mask_im->image, compose => 'Multiply' );
 	croak($r) if $r;
 
 	$combined_mask->Set(alpha=>"Off");
@@ -444,7 +445,7 @@ method apply_mask (
 	my $result_im = $self->image->Clone;
 	croak($r) if $r;
 
-	$r = $result_im->Composite( image => $combined_mask, compose => 'CopyOpacity'  );
+	$r = $result_im->Composite( image => $combined_mask->image, compose => 'CopyOpacity'  );
 	croak($r) if $r;
 
 	return $flatten ? $self->_flatten( $result_im ) : __PACKAGE__->new( image => $result_im );
@@ -636,7 +637,7 @@ method cut_shape (
 	if ( defined $edge_colour ) {
 		$r = $shape_im->Draw(
 			primitive => $primitive,
-			tile => $tx_crop,
+			tile => $tx_crop->image,
 			points => $draw_pts_txt,
 			antialias => 'true',
 			stroke => $edge_colour,
@@ -645,7 +646,7 @@ method cut_shape (
 	} else {
 		$r = $shape_im->Draw(
 			primitive => $primitive,
-			tile => $tx_crop,
+			tile => $tx_crop->image,
 			points => $draw_pts_txt,
 			antialias => 'true',
 			);

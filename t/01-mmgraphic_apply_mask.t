@@ -16,10 +16,8 @@ $expect_a->Read( catfile( $FindBin::Bin, '01_images', 'expect_a.png' ) );
 my $expect_b = Image::Magick->new();
 $expect_b->Read( catfile( $FindBin::Bin, '01_images', 'expect_b.png' ) );
 
-
 my $bg = MMGraphic->new();
 $bg->load_image( catfile( $FindBin::Bin, '01_images', 'background.png' ) );
-
 
 my $orig_a = MMGraphic->new();
 $orig_a->load_image( catfile( $FindBin::Bin, '01_images', 'a_source_rgba_opaque.png' ) );
@@ -32,7 +30,6 @@ $orig_c->load_image( catfile( $FindBin::Bin, '01_images', 'c_source_rgb.jpg' ) )
 
 my $orig_d = MMGraphic->new();
 $orig_d->load_image( catfile( $FindBin::Bin, '01_images', 'd_source_rgb.png' ) );
-
 
 my $mask_e = MMGraphic->new();
 $mask_e->load_image( catfile( $FindBin::Bin, '01_images', 'e_mask_gs.jpg' ) );
@@ -85,7 +82,7 @@ exit;
 
 sub cmp_image {
 	my ( $result_img, $expect_img, $fuzz_percent, $test_name ) = @_;
-	my $difference_img = $expect_img->Compare( image => $result_img, metric=>'rmse' );
+	my $difference_img = $expect_img->Compare( image => $result_img->image, metric=>'rmse' );
   	ok( $difference_img->Get('error') < $fuzz_percent/100, $test_name )
   		or diag "Error metric: " . $difference_img->Get('error');
 }

@@ -73,7 +73,7 @@ sub create_graphic {
 
 sub cmp_image {
 	my ( $result_img, $expect_img, $fuzz_percent, $test_name ) = @_;
-	my $difference_img = $expect_img->Compare( image => $result_img, metric=>'rmse' );
+	my $difference_img = $expect_img->Compare( image => $result_img->image, metric=>'rmse' );
 	return if ok( $difference_img->Get('error') < $fuzz_percent/100, $test_name );
   	return $difference_img;
 }
