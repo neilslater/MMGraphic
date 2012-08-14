@@ -3,7 +3,7 @@ use Moose;
 use Carp;
 use MMGraphic::Types;
 
-use MMGraphic::IM;
+use MMGraphic::Image;
 use Image::Magick;
 use List::AllUtils qw(min max);
 use MooseX::Method::Signatures;
@@ -21,11 +21,10 @@ MMGraphic - (M)oose and Image::(M)agick Graphics
 
 MMGraphic provides some high-level routines for manipulating images. These
 routines encapsulate knowledge about how to perform certain transformations
-in L<Image::Magick>. Methods in MMGraphic also check parameters and throw exceptions
-when errors occur, unlike L<Image::Magick>.
+in L<Image::Magick>.
 
-The contained L<Image::Magick> object can be accessed directly via the C<image>
-property.
+The contained L<Image::Magick> object can be accessed indirectly via
+the C<image> property.
 
 Using the Moose framework it is very easy to sub-class MMGraphic and add
 your own high-level image management routines.
@@ -41,14 +40,14 @@ Please see http://www.imagemagick.org/ for details.
 
 =head2 image
 
-A L<MMGraphic::IM> wrapper object to L<Image::Magic>.
+A L<MMGraphic::Image> wrapper object to L<Image::Magic>.
 
 You can set the value using a scalar file path, or another MMGraphic object
 (for both of these cases, MMGraphic creates a new L<Image::Magick> object).
 
 I<Warning>! MMGraphic does not check for multiple references to the same
-L<MMGraphic::IM> object. Unpredictable things may happen if you instantiate
-multiple MMGraphic objects with the exact same L<MMGraphic::IM> object and
+L<MMGraphic::Image> object. Unpredictable things may happen if you instantiate
+multiple MMGraphic objects with the exact same L<MMGraphic::Image> object and
 then process them differently.
 
 If you want to have multiple MMGraphic objects initialised from the same base
@@ -59,8 +58,8 @@ MMGraphic objects. Alternatively, you can make use of the C<clone> method.
 
 has 'image' => (
 	is => 'rw',
-    isa => 'MMGraphicIMWrapper',
-	default => sub { MMGraphic::IM->new();},
+    isa => 'MMGraphicImageObject',
+	default => sub { MMGraphic::Image->new();},
 	coerce => 1,
 );
 
@@ -73,22 +72,28 @@ has 'image' => (
 Many of MMGraphic's methods alter the contained image.
 
 By default, those methods create and return a new MMGraphic
-object. which in turn contains a new L<Image::Magick> object.
+object. which in turn contains a new L<MMGraphic::Image> object (which
+in turn contains a new L<Image::Magick> object).
 
-If you provide a true value for C<flatten>, then the methods will
+If you provide a true value for C<flatten>, then those methods will
 alter the image data within the current object instead.
 
 =head3 graphic
 
 Several methods combine two or more graphics to produce a new image.
 
-The C<graphic> parameter will accept any of the following values:
+Any C<graphic> or C<< <foo>_graphic >> parameter will generally
+accept any of the following values:
 
 =over
 
 =item B<*>
 
 An object of this class, C<MMGraphic>
+
+=item B<*>
+
+An object of the C<MMGraphic::Image> class.
 
 =item B<*>
 
@@ -103,7 +108,7 @@ A scalar path to an image file (loaded using L<Image::Magick>'s C<Read> method).
 =head2 clone
 
 Returns a copy of the current object, containing a copy of the
-MMGraphic::IM image.
+MMGraphic::Image image.
 
 =cut
 
@@ -119,10 +124,9 @@ from the file.
 =cut
 
 method load_image (Str $file_name) {
-	my $im = MMGraphic::IM->new();
-	$r = $im->Read( $file_name );
-	croak($r) if $r;
-	$self->image( $im );
+	my $image = MMGraphic::Image->new();
+	$image->Read( $file_name );
+	$self->image( $image );
 	return;
 }
 
@@ -133,8 +137,7 @@ Saves the current C<image> to a named file.
 =cut
 
 method save_image (Str $file_name) {
-	$r = $self->image->Write( $file_name );
-	croak($r) if $r;
+	$self->image->Write( $file_name );
 	return;
 }
 
@@ -181,13 +184,10 @@ is 100 (fully opaque).
 
 =back
 
-Additional parameters may be supplied. These are passed direct
-to the Image::Magick C<Composite> method.
-
 =cut
 
 method composite (
-	MMGraphicImage :$graphic! does coerce,
+	MMGraphicObject :$graphic! does coerce,
 	Bool :$flatten,
 	HashRef :$mask,
 	Str :$compose = 'Over',
@@ -205,8 +205,7 @@ method composite (
 
 	my $result_im = $self->image->Clone;
 
-	$r = $result_im->Composite( image => $src_graphic->image->image, %options );
-	croak($r) if $r;
+	$result_im->Composite( graphic => $src_graphic, %options );
 
 	# Dealing with opacity whilst respecting compose choice and
 	# potential transparency in the final image is complicated. Effectively
@@ -229,17 +228,14 @@ method composite (
 		$r = $combined_mask->Negate();
 		croak($r) if $r;
 
-		$r = $combined_mask->Composite( image => $temp_mask_im->image, compose => 'Multiply' );
-		croak($r) if $r;
+		$combined_mask->Composite( graphic => $temp_mask_im, compose => 'Multiply' );
 
 		$combined_mask->Set(alpha=>"Off");
 		croak($r) if $r;
 
-		$r = $result_layer_im->Composite( image => $combined_mask->image, compose => 'CopyOpacity'  );
-		croak($r) if $r;
+		$result_layer_im->Composite( graphic => $combined_mask, compose => 'CopyOpacity'  );
 
-		$r = $result_im->Composite( image => $result_layer_im->image );
-		croak($r) if $r;
+		$result_im->Composite( graphic => $result_layer_im );
 	}
 
 	return $flatten ? $self->_flatten( $result_im ) : __PACKAGE__->new( image => $result_im );
@@ -349,9 +345,9 @@ method emboss (
 		croak($r) if $r;
 
 		my $darken_opacity = int( $valley_darken ) . '%';
-		$r = $result_im->Composite( image => $valley_darken_im->image, mask => $valley_mask_im->image,
+		
+		$result_im->Composite( graphic => $valley_darken_im, mask_graphic => $valley_mask_im,
 			opacity => $darken_opacity, compose => 'Overlay' );
-		croak($r) if $r;
 	}
 
 	return $flatten ? $self->_flatten( $result_im ) : __PACKAGE__->new( image => $result_im );
@@ -395,7 +391,7 @@ If supplied the mask is blurred by this amount before use.
 =cut
 
 method apply_mask (
-    MMGraphicIMWrapper :$graphic! does coerce,
+    MMGraphicImageObject :$graphic! does coerce,
 	Bool :$flatten,
 	Bool :$use_alpha,
 	Bool :$negate,
@@ -436,18 +432,15 @@ method apply_mask (
 	$r = $combined_mask->Negate();
 	croak($r) if $r;
 
-	$r = $combined_mask->Composite( image => $mask_im->image, compose => 'Multiply' );
-	croak($r) if $r;
+	$combined_mask->Composite( graphic => $mask_im, compose => 'Multiply' );
 
 	$combined_mask->Set(alpha=>"Off");
 	croak($r) if $r;
 
 	my $result_im = $self->image->Clone;
-	croak($r) if $r;
-
-	$r = $result_im->Composite( image => $combined_mask->image, compose => 'CopyOpacity'  );
-	croak($r) if $r;
-
+	
+	$result_im->Composite( graphic => $combined_mask, compose => 'CopyOpacity'  );
+	
 	return $flatten ? $self->_flatten( $result_im ) : __PACKAGE__->new( image => $result_im );
 }
 
@@ -510,7 +503,7 @@ method drop_shadow (
 	Num :$offset_y = 0,
 	Num :$opacity = 80,
 	Str :$shadow_colour = 'black',
-	MMGraphicImage :$shadow_graphic? does coerce,
+	MMGraphicObject :$shadow_graphic? does coerce,
 	Bool :$shadow_only
 	) {
 	my $orig = $self->image();

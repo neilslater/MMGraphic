@@ -17,33 +17,33 @@ framework.
 
 =head1 TYPES
 
-=head2 IMImage
+=head2 ImageMagickObject
 
 An L<Image::Magick> image object.
 
 =cut
 
-subtype 'IMImage' => as class_type('Image::Magick');
+subtype 'ImageMagickObject' => as class_type('Image::Magick');
 
-=head2 MMGraphicIMWrapper
+=head2 MMGraphicImageObject
 
-A L<MMGraphic::IM> object.
+A L<MMGraphic::Image> object.
 
 =cut
 
-subtype 'MMGraphicIMWrapper' => as class_type('MMGraphic::IM');
+subtype 'MMGraphicImageObject' => as class_type('MMGraphic::Image');
 
-=head2 MMGraphicImage
+=head2 MMGraphicObject
 
 A L<MMGraphic> object.
 
 =cut
 
-subtype 'MMGraphicImage' => as class_type('MMGraphic');
+subtype 'MMGraphicObject' => as class_type('MMGraphic');
 
 =head1 COERCIONS
 
-The types C<IMImage>, C<MMGraphicIMWrapper>, and C<MMGraphicImage>
+The types C<ImageMagickObject>, C<MMGraphicImageObject>, and C<MMGraphicObject>
 all coerce between each other using the underlying L<Image::Magick>
 object. In addition all three types will accept a string path to
 an image file which they will load (using L<Image::Magick>'s
@@ -51,64 +51,74 @@ C<Read> method).
 
 =cut
 
-coerce 'IMImage'
+# For my own sanity, inside MMGraphic, I use the following object
+# name "decorations":
+
+# $<THING>_path    = string path to image file
+# $<THING>_IM      = Image::Magick object
+# $<THING>_image   = MMGraphic::Image object
+# $<THING>_MMG     = MMGraphic object
+
+# The two upper-cased names a deliberately eye-catching, as generally
+# I expect to see $<THING>_image
+
+coerce 'ImageMagickObject'
 	=> from 'Str'
 		=> via {
 			# TODO: co-erce from URL using LWP/GET ?
-			my $im = Image::Magick->new();
-			$r = $im->Read( $_ );
+			my $IM = Image::Magick->new();
+			$r = $IM->Read( $_ );
 			croak($r) if $r;
-			$im;
+			$IM;
         }
-    => from 'MMGraphicIMWrapper'
+    => from 'MMGraphicImageObject'
         => via {
             # The Clone is not always necessary, but protects against
             # accidental cross-links of image objects between two
-            # MMGraphic or MMGraphic::IM objects
+            # MMGraphic or MMGraphic::Image objects
             $_->image->Clone();
         }
-	=> from 'MMGraphicImage'
+	=> from 'MMGraphicObject'
 		=> via {
 			# The Clone is not always necessary, but protects against
 			# accidental cross-links of image objects between two
-			# MMGraphic or MMGraphic::IM objects
+			# MMGraphic or MMGraphic::Image objects
             $_->image->image->Clone();
         };
 
-
-coerce 'MMGraphicIMWrapper'
+coerce 'MMGraphicImageObject'
     => from 'Str'
         => via {
             # TODO: co-erce from URL using LWP/GET ?
-            my $im = Image::Magick->new();
-            $r = $im->Read( $_ );
+            my $IM = Image::Magick->new();
+            $r = $IM->Read( $_ );
             croak($r) if $r;
-            MMGraphic::IM->new( image => $im );
+            MMGraphic::Image->new( image => $IM );
             }
-    => from 'IMImage'
+    => from 'ImageMagickObject'
         => via {
-            MMGraphic::IM->new( image => $_ );
+            MMGraphic::Image->new( image => $_ );
         }
-    => from 'MMGraphicImage'
+    => from 'MMGraphicObject'
         => via {
             $_->image;
         };
 
 
-coerce 'MMGraphicImage'
+coerce 'MMGraphicObject'
 	=> from 'Str'
 		=> via {
 			# TODO: co-erce from URL using LWP/GET ?
-			my $im = Image::Magick->new();
-			$r = $im->Read( $_ );
+			my $IM = Image::Magick->new();
+			$r = $IM->Read( $_ );
 			croak($r) if $r;
-            MMGraphic->new( image => MMGraphic::IM->new( image => $im ) );
+            MMGraphic->new( image => MMGraphic::Image->new( image => $IM ) );
 			}
-	=> from 'IMImage'
+	=> from 'ImageMagickObject'
 		=> via {
-            MMGraphic->new( image => MMGraphic::IM->new( image => $_ ) );
+            MMGraphic->new( image => MMGraphic::Image->new( image => $_ ) );
 		}
-    => from 'MMGraphicIMWrapper'
+    => from 'MMGraphicImageObject'
         => via {
             MMGraphic->new( image => $_ );
         };
