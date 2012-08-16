@@ -16,30 +16,21 @@ $expect_a->Read( catfile( $FindBin::Bin, '01_images', 'expect_a.png' ) );
 my $expect_b = Image::Magick->new();
 $expect_b->Read( catfile( $FindBin::Bin, '01_images', 'expect_b.png' ) );
 
-my $bg = MMGraphic->new();
-$bg->load_image( catfile( $FindBin::Bin, '01_images', 'background.png' ) );
+my $bg = MMGraphic->new( catfile( $FindBin::Bin, '01_images', 'background.png' ) );
 
-my $orig_a = MMGraphic->new();
-$orig_a->load_image( catfile( $FindBin::Bin, '01_images', 'a_source_rgba_opaque.png' ) );
+my $orig_a = MMGraphic->new( catfile( $FindBin::Bin, '01_images', 'a_source_rgba_opaque.png' ) );
 
-my $orig_b = MMGraphic->new();
-$orig_b->load_image( catfile( $FindBin::Bin, '01_images', 'b_source_rgba_trans.png' ) );
+my $orig_b = MMGraphic->new( catfile( $FindBin::Bin, '01_images', 'b_source_rgba_trans.png' ) );
 
-my $orig_c = MMGraphic->new();
-$orig_c->load_image( catfile( $FindBin::Bin, '01_images', 'c_source_rgb.jpg' ) );
+my $orig_c = MMGraphic->new( catfile( $FindBin::Bin, '01_images', 'c_source_rgb.jpg' ) );
 
-my $orig_d = MMGraphic->new();
-$orig_d->load_image( catfile( $FindBin::Bin, '01_images', 'd_source_rgb.png' ) );
+my $orig_d = MMGraphic->new( catfile( $FindBin::Bin, '01_images', 'd_source_rgb.png' ) );
 
-my $mask_e = MMGraphic->new();
-$mask_e->load_image( catfile( $FindBin::Bin, '01_images', 'e_mask_gs.jpg' ) );
+my $mask_e = MMGraphic->new( catfile( $FindBin::Bin, '01_images', 'e_mask_gs.jpg' ) );
 
-my $mask_f = MMGraphic->new();
-$mask_f->load_image( catfile( $FindBin::Bin, '01_images', 'f_mask_gs.png' ) );
+my $mask_f = MMGraphic->new( catfile( $FindBin::Bin, '01_images', 'f_mask_gs.png' ) );
 
-my $mask_g = MMGraphic->new();
-$mask_g->load_image( catfile( $FindBin::Bin, '01_images', 'g_mask_alpha.png' ) );
-
+my $mask_g = MMGraphic->new( catfile( $FindBin::Bin, '01_images', 'g_mask_alpha.png' ) );
 
 my %graphic_of = (
 	a => $orig_a,

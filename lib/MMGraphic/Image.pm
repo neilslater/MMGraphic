@@ -137,6 +137,26 @@ method Clone {
     return __PACKAGE__->new( image => $self->image->Clone() );
 }
 
+=head2 _Color( $mmg_color )
+
+All pixels in the image are set to C<$mmg_color>, which should be
+a L<MMGraphic::Color> object or a hashref or string that will be passed to
+L<MMGraphic::Color>'s constructor.
+
+=cut
+
+
+method _Color (
+	Object $color!
+	) {
+    _imtry {
+        $self->image->Color(
+			color => $color->as_image_magick_string()
+		);
+    };
+    return;
+}
+
 =head2 Composite
 
 Alters image by composing another one on top of it.

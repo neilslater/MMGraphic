@@ -52,9 +52,9 @@ sub create_graphic {
 
 	my $expect_path = catfile( $FindBin::Bin, '05_images', 'expect_' . $test_name .  '.png' );
 
-	my $expect_graphic = MMGraphic->new();
+	my $expect_graphic;
 	if (-e $expect_path) {
-		$expect_graphic->load_image( $expect_path );
+		$expect_graphic = MMGraphic->new( $expect_path );
 	} else {
 		diag( "Auto-passing test $texture_name, $test_name" );
 		$expect_graphic = $result_graphic->clone();

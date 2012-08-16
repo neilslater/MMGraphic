@@ -45,22 +45,25 @@ subtype 'MMGraphicObject' => as class_type('MMGraphic');
 
 The types C<ImageMagickObject>, C<MMGraphicImageObject>, and C<MMGraphicObject>
 all coerce between each other using the underlying L<Image::Magick>
-object. In addition all three types will accept a string path to
+object. In addition all three types will coerce from a string path to
 an image file which they will load (using L<Image::Magick>'s
 C<Read> method).
 
 =cut
 
-# For my own sanity, inside MMGraphic, I use the following object
-# name "decorations":
+# So we have four possibilities all representing the same core concept "image" and
+# with subtle differences in their APIs.
+
+# Therefore, for my own sanity, inside MMGraphic, I use the following object
+# name "decorations" as consistently as possible:
 
 # $<THING>_path    = string path to image file
 # $<THING>_IM      = Image::Magick object
 # $<THING>_image   = MMGraphic::Image object
 # $<THING>_MMG     = MMGraphic object
 
-# The two upper-cased names a deliberately eye-catching, as generally
-# I expect to see $<THING>_image
+# The two upper-cased names are deliberately eye-catching, as generally
+# the code works with $<THING>_image i.e. MMGraphic::Image
 
 coerce 'ImageMagickObject'
 	=> from 'Str'
@@ -73,17 +76,11 @@ coerce 'ImageMagickObject'
         }
     => from 'MMGraphicImageObject'
         => via {
-            # The Clone is not always necessary, but protects against
-            # accidental cross-links of image objects between two
-            # MMGraphic or MMGraphic::Image objects
-            $_->image->Clone();
+            $_->image;
         }
 	=> from 'MMGraphicObject'
 		=> via {
-			# The Clone is not always necessary, but protects against
-			# accidental cross-links of image objects between two
-			# MMGraphic or MMGraphic::Image objects
-            $_->image->image->Clone();
+            $_->image->image;
         };
 
 coerce 'MMGraphicImageObject'

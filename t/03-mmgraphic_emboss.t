@@ -11,7 +11,7 @@ use MMGraphic;
 use Image::Magick;
 
 my %graphic_of = (
-        bg => MMGraphic->new( image => catfile( $FindBin::Bin, '03_images', 'background.png' ) ),
+    bg => MMGraphic->new( image => catfile( $FindBin::Bin, '03_images', 'background.png' ) ),
 	a => MMGraphic->new( image => catfile( $FindBin::Bin, '03_images', 'a_source_rgba_opaque.png' ) ),
 	b => MMGraphic->new( image =>  catfile( $FindBin::Bin, '03_images', 'b_source_rgba_trans.png' ) ),
 	c => MMGraphic->new( image => catfile( $FindBin::Bin, '03_images', 'c_source_rgb.jpg' ) ),
@@ -52,9 +52,9 @@ sub create_graphic {
 
 	my $expect_path = catfile( $FindBin::Bin, '03_images', 'expect_' . $test_name .  '.png' );
 
-	my $expect_graphic = MMGraphic->new();
+	my $expect_graphic;
 	if (-e $expect_path) {
-		$expect_graphic->load_image( $expect_path );
+		$expect_graphic = MMGraphic->new( $expect_path );
 	} else {
 		diag( "Auto-passing test $emboss_name, $test_name" );
 		$expect_graphic = $result_graphic->clone();

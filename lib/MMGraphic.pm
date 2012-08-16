@@ -17,6 +17,17 @@ our $VERSION = '0.2';
 
 MMGraphic - (M)oose and Image::(M)agick Graphics
 
+=head1 SYNOPSIS
+
+	use MMGraphic;
+	
+	$pic = MMGraphic->new( '/tmp/photo.jpg' );
+	$frame = MMGraphic->new( '/tmp/frame.png' );
+	
+	$framed = $pic->composite( graphic => $frame, opacity => 90 );
+	
+	$framed->save_image( '/tmp/framed_photo.png' );
+
 =head1 DESCRIPTION
 
 MMGraphic provides some high-level routines for manipulating images. These
@@ -26,31 +37,79 @@ in L<Image::Magick>.
 The contained L<Image::Magick> object can be accessed indirectly via
 the C<image> property.
 
-Using the Moose framework it is very easy to sub-class MMGraphic and add
+Using the Moose framework it is very easy to sub-class B<MMGraphic> and add
 your own high-level image management routines.
 
 =head1 INSTALLATION
 
 The Image Magick library and Perl bindings do not install via CPAN. Before
-you can use MMGraphic, you need to install them directly.
+you can use B<MMGraphic>, you need to install them directly.
 
 Please see http://www.imagemagick.org/ for details.
 
-=head1 PROPERTIES
+=head1 CONSTRUCTOR
+
+As well as L<Moose>'s standard constructor:
+
+	$graphic = MMGraphic->new( image => '/path/to/image.jpg' );
+
+the module supports a shorter version
+
+	$graphic = MMGraphic->new( '/path/to/image.jpg' );
+
+Object references passed into the cosntructor are always
+cloned from during instantiation. If, for some reason, you
+want to cross-link multiple B<MMGraphic> objects to have
+the same underlying L<MMGraphic::Image> and/or L<Image::Magick>
+reference, you can achieve that by setting the C<image> accessor
+directly.
+
+=cut
+
+# BUILDARGS
+# This modifier promotes a single-param call to constructor 
+# into Moose's usual key/value form, and also ensures objects
+# are cloned to prevent possibility of odd cross-linking
+around BUILDARGS => sub {
+	my $orig = shift;
+	my $class = shift;
+	
+	if ( @_ == 1 ) {
+		my $image = $_[0];
+		if ( $image->can('clone') ) {
+			$image = $image->clone();
+		} elsif ( $image->can('Clone') ) {
+			$image = $image->Clone();
+		}
+		return $class->$orig( image => $image );
+	}
+	else {
+		my %args = @_;
+		my $image = $args{image};
+		if ( $image->can('clone') ) {
+			$args{image} = $image->clone();
+		} elsif ( $image->can('Clone') ) {
+			$args{image} = $image->Clone();
+		}
+		return $class->$orig( %args );
+	}
+};
+
+=head1 ATTRIBUTES
 
 =head2 image
 
 A L<MMGraphic::Image> wrapper object to L<Image::Magic>.
 
-You can set the value using a scalar file path, or another MMGraphic object
-(for both of these cases, MMGraphic creates a new L<Image::Magick> object).
+You can set the value using a scalar file path, or another B<MMGraphic> object
+(for both of these cases, B<MMGraphic> creates a new L<Image::Magick> object).
 
-I<Warning>! MMGraphic does not check for multiple references to the same
+I<Warning>! B<MMGraphic> does not check for multiple references to the same
 L<MMGraphic::Image> object. Unpredictable things may happen if you instantiate
-multiple MMGraphic objects with the exact same L<MMGraphic::Image> object and
+multiple B<MMGraphic> objects with the exact same L<MMGraphic::Image> object and
 then process them differently.
 
-If you want to have multiple MMGraphic objects initialised from the same base
+If you want to have multiple B<MMGraphic> objects initialised from the same base
 image, you can avoid this issue by using constructor options of scalar file paths or
 MMGraphic objects. Alternatively, you can make use of the C<clone> method.
 
@@ -59,7 +118,7 @@ MMGraphic objects. Alternatively, you can make use of the C<clone> method.
 has 'image' => (
 	is => 'rw',
     isa => 'MMGraphicImageObject',
-	default => sub { MMGraphic::Image->new();},
+	required => 1,
 	coerce => 1,
 );
 
