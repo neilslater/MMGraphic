@@ -16,67 +16,41 @@ our $VERSION = '0.2';
 
 MMGraphic::Image - Wraps Image::Magick with more Moose-y behaviour
 
+=head1 SYNOPSIS
+
+    use MMGraphic::Image;
+
+    $pic = MMGraphic::Image->new( '/tmp/photo.jpg' );
+    $pic->Negate();
+    $pic->Write( '/tmp/photo_negative.jpg' );
+
 =head1 DESCRIPTION
 
-MMGraphic::Image is a Moose-y wrapper for L<Image::Magick>. It provides near
-identical functionality to L<Image::Magick>, but changes calling conventions
-and error handling. In general, all documented
-methods are wrapped with the following changes to behaviour:
+B<MMGraphic::Image> is a Moose-y wrapper for L<Image::Magick>. It provides a
+small subset of L<Image::Magick>'s full behaviour.
 
-=over
+If you need to access a non-exposed L<Image::Magick> feature within a method
+that is not documented here, or one that has been over-ridden by B<MMGraphic::Image>,
+i.e. documented below, but that might have an additional parameter you need to use,
+then you can. Simply access the C<image> property, which is the underlying
+L<Image::Magick> object, and call the method directly on that:
 
-=item B<Parameters>
+    my $result = $mmg_image->image->Mogrify( ... );
+    croak($result) if $result;
 
-Differ as documented, some attempts have been made to make them more
-type-friendly and consistent between Image Magick versions.
-All are validated to some degree before calling the underlying
-L<Image::Magic> method.
-
-=item B<Errors>
-
-Are thrown as exceptions. There is no need to inspect return values for
-possible errors.
-
-=item B<Image Alterations>
-
-Are by default returned as a new MMGraphic::Image object.
-To change this behaviour, the parameter C<flatten>
-can be supplied with a true value.
-
-=item B<Return Values>
-
-Differ as documented, and some attempts have been made to provide
-type friendly or object-oriented values when appropriate.
-
-=back
-
-If an L<Image::Magick> method is I<not> documented below, it is still
-available via this class, but it will be passed through directly to
-L<Image::Magick> and will behave as documented in that module.
-
-As of version 0.2, only the minority of methods and parameters allowed
-by L<Image::Magick> have been implemented in this way by B<MMGraphic::Image>.
-The initial goal is to cover all the functionality required by L<MMGraphic>.
-
-=head1 PROPERTIES
+=head1 ATTRIBUTES
 
 =head2 image
 
 An L<Image::Magick> image.
 
-You can set the value using a scalar file path, or another MMGraphic::Image
-object (for both of these cases, MMGraphic::Image creates a I<new>
-L<Image::Magick> object internally).
+You can set the value using a scalar file path, or another B<MMGraphic::Image>
+object.
 
 I<Warning>! MMGraphic::Image does not check for multiple references to the same
-L<Image::Magick> object. Unpredictable things may happen if you instantiate
+underlying objects. Unpredictable things may happen if you instantiate
 multiple MMGraphic objects with the exact same L<Image::Magick> object and
 then process them differently.
-
-If you want to have multiple B<MMGraphic::Image> objects initialised from the same base
-image, you can avoid this issue by using constructor options of scalar file
-paths or B<MMGraphic::Image> objects. Alternatively, you can make use of the
-C<Clone> method.
 
 =cut
 
@@ -96,11 +70,11 @@ has 'image' => (
 
 =head2 Common Parameters
 
-=head3 graphic
+=head3 image
 
-Several methods combine two or more graphics to produce a new image.
+Several methods combine two or more images to produce a new image.
 
-Any C<graphic> or C<< <foo>_graphic >> parameter will accept any
+Any C<image> or C<< <foo>_image >> parameter will accept any
 of the following values:
 
 =over
@@ -123,9 +97,6 @@ An object of class L<Image::Magick>
 A scalar path to an image file (loaded using L<Image::Magick>'s C<Read> method).
 
 =back
-
-Methods in B<MMGraphic::Image> tend to take C<graphic> or C<< <foo>_graphic >>
-parameters where L<Image::Magick> would take an C<image> as a parameter.
 
 =head2 Clone
 
@@ -166,13 +137,13 @@ Returns nothing.
 
 =over
 
-=item B<graphic>
+=item B<image>
 
-A graphic that will be inserted over the existing image.
+An image that will be combined over the existing image.
 
 This is the only mandatory parameter.
 
-See L<Common Parameters (graphic)|/graphic>.
+See L<Common Parameters (image)|/image>.
 
 =item B<x> and B<y>
 
@@ -182,13 +153,20 @@ Co-ordinates to use for C<graphic>, defaults to 0,0.
 
 Compose mode for C<graphic>, defaults to 'Over'.
 
+=item B<mask>
+
+An optional mask image that controls the degree of
+composite applied.
+
+See L<Common Parameters (image)|/image>.
+
 =back
 
 =cut
 
 method Composite (
-    MMGraphicImageObject :$graphic! does coerce,
-    MMGraphicImageObject :$mask_graphic does coerce,
+    MMGraphicImageObject :$image! does coerce,
+    MMGraphicImageObject :$mask does coerce,
     Str :$compose = 'Over',
     Str :$opacity,
     Num :$x = 0,
@@ -196,9 +174,9 @@ method Composite (
     ) {
     _imtry {
         $self->image->Composite(
-            image => $graphic->image,
+            image => $image->image,
             compose => $compose,
-            $mask_graphic ? ( mask => $mask_graphic->image ) : (),
+            $mask ? ( mask => $mask->image ) : (),
             $opacity ? ( opacity => $opacity ) : (),
             x => $x,
             y => $y
