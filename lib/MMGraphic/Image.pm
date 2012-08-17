@@ -5,6 +5,7 @@ use Carp;
 use Image::Magick;
 use MooseX::Method::Signatures;
 use MMGraphic::Types;
+use namespace::autoclean;
 
 sub _imtry(&); # Wrapper to throw exceptions
 
@@ -54,7 +55,7 @@ available via this class, but it will be passed through directly to
 L<Image::Magick> and will behave as documented in that module.
 
 As of version 0.2, only the minority of methods and parameters allowed
-by L<Image::Magick> have been implemented in this way by B<MMGraphic::Image>. 
+by L<Image::Magick> have been implemented in this way by B<MMGraphic::Image>.
 The initial goal is to cover all the functionality required by L<MMGraphic>.
 
 =head1 PROPERTIES
@@ -80,10 +81,10 @@ C<Clone> method.
 =cut
 
 has 'image' => (
-	is => 'rw',
-	isa => 'ImageMagickObject',
-	default => sub { Image::Magick->new();},
-	coerce => 1,
+    is => 'rw',
+    isa => 'ImageMagickObject',
+    default => sub { Image::Magick->new();},
+    coerce => 1,
     handles => [qw(
         Color Set Separate Negate Blur
         Shade ContrastStretch SigmoidalContrast QuantumRange
@@ -147,12 +148,12 @@ L<MMGraphic::Color>'s constructor.
 
 
 method _Color (
-	Object $color!
-	) {
+    Object $color!
+    ) {
     _imtry {
         $self->image->Color(
-			color => $color->as_image_magick_string()
-		);
+            color => $color->as_image_magick_string()
+        );
     };
     return;
 }
@@ -237,6 +238,7 @@ method Write (Str $file_name) {
     return;
 }
 
+__PACKAGE__->meta->make_immutable;
 
 #######################################################################
 #
@@ -262,7 +264,6 @@ under the terms of either: the GNU General Public License as published
 by the Free Software Foundation; or the Artistic License.
 
 See http://dev.perl.org/licenses/ for more information.
-
 
 =cut
 

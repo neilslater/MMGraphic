@@ -28,8 +28,8 @@ my $mm_im_c = MMGraphic::Image->new( image => catfile( $FindBin::Bin, '01_images
 exit;
 
 sub cmp_image {
-	my ( $result_img, $expect_img, $fuzz_percent, $test_name ) = @_;
-	my $difference_img = $expect_img->Compare( image => $result_img, metric=>'rmse' );
-  	ok( $difference_img->Get('error') < $fuzz_percent/100, $test_name )
-  		or diag "Error metric: " . $difference_img->Get('error');
+    my ( $result_img, $expect_img, $fuzz_percent, $test_name ) = @_;
+    my $difference_img = $expect_img->Compare( image => $result_img, metric=>'rmse' );
+    ok( $difference_img->Get('error') < $fuzz_percent/100, $test_name )
+        or diag "Error metric: " . $difference_img->Get('error');
 }

@@ -12,9 +12,9 @@ use Image::Magick;
 
 my %graphic_of = (
     bg => MMGraphic->new( image => catfile( $FindBin::Bin, '04_images', 'background.jpg' ) ),
-	fs => MMGraphic->new( image => catfile( $FindBin::Bin, '04_images', 'fancy_shadow.png' ) ),
-	a => MMGraphic->new( image =>  catfile( $FindBin::Bin, '04_images', 'a_object.png' ) ),
-	b => MMGraphic->new( image =>  catfile( $FindBin::Bin, '04_images', 'b_object.png' ) ),
+    fs => MMGraphic->new( image => catfile( $FindBin::Bin, '04_images', 'fancy_shadow.png' ) ),
+    a => MMGraphic->new( image =>  catfile( $FindBin::Bin, '04_images', 'a_object.png' ) ),
+    b => MMGraphic->new( image =>  catfile( $FindBin::Bin, '04_images', 'b_object.png' ) ),
 );
 
 ##############################################################################
@@ -72,43 +72,43 @@ create_graphic(qw(b offset2), { offset_x=>4, offset_y=>-5,  shadow_graphic => $g
 exit;
 
 sub create_graphic {
-	my ( $shadow_name, $test_name, $options ) = @_;
-	$options ||= {};
+    my ( $shadow_name, $test_name, $options ) = @_;
+    $options ||= {};
 
-	# The clone prevents changing loaded graphics on flattening
-	my $shadow_graphic = $graphic_of{ $shadow_name }->clone();
-	my $result_name = 'mb_' . $shadow_name . '-' . $test_name;
-	my $interim_graphic = $shadow_graphic->drop_shadow( %$options );
+    # The clone prevents changing loaded graphics on flattening
+    my $shadow_graphic = $graphic_of{ $shadow_name }->clone();
+    my $result_name = 'mb_' . $shadow_name . '-' . $test_name;
+    my $interim_graphic = $shadow_graphic->drop_shadow( %$options );
 
-	my $result_graphic = $options->{flatten} ?
-		$graphic_of{bg}->composite( graphic => $shadow_graphic ) :
-		$graphic_of{bg}->composite( graphic => $interim_graphic );
+    my $result_graphic = $options->{flatten} ?
+        $graphic_of{bg}->composite( graphic => $shadow_graphic ) :
+        $graphic_of{bg}->composite( graphic => $interim_graphic );
 
-	my $expect_path = catfile( $FindBin::Bin, '04_images', 'expect_' . $test_name .  '.png' );
+    my $expect_path = catfile( $FindBin::Bin, '04_images', 'expect_' . $test_name .  '.png' );
 
-	my $expect_graphic;
-	if (-e $expect_path) {
-		$expect_graphic = MMGraphic->new( $expect_path );
-	} else {
-		diag( "Auto-passing test $shadow_name, $test_name" );
-		$expect_graphic = $result_graphic->clone();
-		$expect_graphic->save_image( $expect_path );
-	}
+    my $expect_graphic;
+    if (-e $expect_path) {
+        $expect_graphic = MMGraphic->new( $expect_path );
+    } else {
+        diag( "Auto-passing test $shadow_name, $test_name" );
+        $expect_graphic = $result_graphic->clone();
+        $expect_graphic->save_image( $expect_path );
+    }
 
 
-	# If we fail the test, write actual result so we can what the problem is, and write difference image too
-	my $diff_im = $options->{flatten} ?
-		cmp_image( $result_graphic->image, $expect_graphic->image, 1, "Drop shadow (flattened): $shadow_name / $test_name" ) :
-		cmp_image( $result_graphic->image, $expect_graphic->image, 1, "Drop shadow (result): $shadow_name / $test_name" );
-	if ( $diff_im ) {
-		$diff_im->Write( catfile( $FindBin::Bin, '04_images', 'diff_' . $result_name . '.png' ) );
-		$result_graphic->save_image( catfile( $FindBin::Bin, '04_images', 'result_' . $result_name . '.png' ) );
-	}
+    # If we fail the test, write actual result so we can what the problem is, and write difference image too
+    my $diff_im = $options->{flatten} ?
+        cmp_image( $result_graphic->image, $expect_graphic->image, 1, "Drop shadow (flattened): $shadow_name / $test_name" ) :
+        cmp_image( $result_graphic->image, $expect_graphic->image, 1, "Drop shadow (result): $shadow_name / $test_name" );
+    if ( $diff_im ) {
+        $diff_im->Write( catfile( $FindBin::Bin, '04_images', 'diff_' . $result_name . '.png' ) );
+        $result_graphic->save_image( catfile( $FindBin::Bin, '04_images', 'result_' . $result_name . '.png' ) );
+    }
 }
 
 sub cmp_image {
-	my ( $result_img, $expect_img, $fuzz_percent, $test_name ) = @_;
-	my $difference_img = $expect_img->Compare( image => $result_img->image, metric=>'rmse' );
-	return if ok( $difference_img->Get('error') < $fuzz_percent/100, $test_name );
-  	return $difference_img;
+    my ( $result_img, $expect_img, $fuzz_percent, $test_name ) = @_;
+    my $difference_img = $expect_img->Compare( image => $result_img->image, metric=>'rmse' );
+    return if ok( $difference_img->Get('error') < $fuzz_percent/100, $test_name );
+    return $difference_img;
 }

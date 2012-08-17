@@ -7,6 +7,7 @@ use MMGraphic::Image;
 use Image::Magick;
 use List::AllUtils qw(min max);
 use MooseX::Method::Signatures;
+use namespace::autoclean;
 
 my $r; # Temp holder for Image::Magick responses . . .
 
@@ -708,6 +709,7 @@ method cut_shape (
 	return $flatten ? $self->_flatten( $shape_im ) : __PACKAGE__->new( image => $shape_im );
 }
 
+__PACKAGE__->meta->make_immutable;
 
 #####################################################################################
 #

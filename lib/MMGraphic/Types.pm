@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use Moose::Util::TypeConstraints;
 use Image::Magick;
+use namespace::autoclean;
 
 my $r; # To hold Image::Magick responses
 
