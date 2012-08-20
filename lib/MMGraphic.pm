@@ -574,7 +574,6 @@ method drop_shadow (
     } else {
         my $sized_im = $orig->Clone();
         $r = $sized_im->Color( $shadow_colour );
-        croak($r) if $r;
         $sg = __PACKAGE__->new( image => $sized_im );
     }
 

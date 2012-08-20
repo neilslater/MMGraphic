@@ -60,7 +60,7 @@ has 'image' => (
     default => sub { Image::Magick->new();},
     coerce => 1,
     handles => [qw(
-        Color Set Separate Negate Blur
+        Set Separate Negate Blur
         Shade ContrastStretch SigmoidalContrast QuantumRange
         Colorize Crop Draw Get ReadImage Compare
     )],
@@ -109,21 +109,21 @@ method Clone {
     return __PACKAGE__->new( image => $self->image->Clone() );
 }
 
-=head2 _Color( $mmg_color )
+=head2 Color( $mmg_color )
 
-All pixels in the image are set to C<$mmg_color>, which should be
-a L<MMGraphic::Color> object or a hashref or string that will be passed to
-L<MMGraphic::Color>'s constructor.
+All pixels in the image are set to C<$mmg_color>, which is a string
+color description suitable for L<Image::Magick>.
 
 =cut
 
+# TODO: Create and use MMGraphic::Color class instead
 
-method _Color (
-    Object $color!
+method Color (
+    Str $color!
     ) {
     _imtry {
         $self->image->Color(
-            color => $color->as_image_magick_string()
+            color => $color
         );
     };
     return;
