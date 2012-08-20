@@ -60,7 +60,7 @@ has 'image' => (
     default => sub { Image::Magick->new();},
     coerce => 1,
     handles => [qw(
-        Set Separate Negate Blur
+        Blur
         Shade ContrastStretch SigmoidalContrast QuantumRange
         Colorize Crop Draw Get ReadImage Compare
     )],
@@ -135,6 +135,8 @@ Alters image by composing another one on top of it.
 
 Returns nothing.
 
+Parameters:
+
 =over
 
 =item B<image>
@@ -185,6 +187,25 @@ method Composite (
     return;
 }
 
+=head2 Negate( )
+
+Inverts all image channels except Opacity, creating an
+image "Negative".
+
+Parameters: None
+
+Returns: Nothing
+
+=cut
+
+# TODO: Enumerate allowed channel names, add remaining params
+
+method Negate () {
+    _imtry {
+        $self->image->Negate();
+    };
+    return;
+}
 
 =head2 Read( $file_name )
 
@@ -202,6 +223,53 @@ method Read (Str $file_name) {
     return;
 }
 
+=head2 Separate( channel => $channel_name )
+
+Converts image to greyscale, based on single image
+channel (such as "Red" or "Opacity")
+
+Parameters:
+
+=over
+
+=item B<channel>
+
+String name of the channel, e.g. C<Opacity>
+
+=back
+
+=cut
+
+# TODO: Enumerate allowed channel names, add remaining params
+
+method Separate (
+    Str :$channel!
+    ){
+    _imtry {
+        $self->image->Separate(
+            channel => $channel
+        );
+    };
+    return;
+}
+
+=head2 Set( image_property => $new_value, ... )
+
+Writes one or more image properties
+
+=cut
+
+# TODO: Itemise (in code and docs) params and validate them
+
+sub Set {
+    my ($self,%params) = @_;
+    _imtry {
+        $self->image->Set(
+            %params
+        );
+    };
+    return;
+}
 
 =head2 Write( $file_name )
 

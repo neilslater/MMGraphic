@@ -1,11 +1,10 @@
 package MMGraphic;
 use Moose;
 use Carp;
-use MMGraphic::Types;
 
-use MMGraphic::Image;
-use Image::Magick;
 use List::AllUtils qw(min max);
+use MMGraphic::Image;
+use MMGraphic::Types;
 use MooseX::Method::Signatures;
 use namespace::autoclean;
 
@@ -20,14 +19,14 @@ MMGraphic - (M)oose and Image::(M)agick Graphics
 
 =head1 SYNOPSIS
 
-    use MMGraphic;
+  use MMGraphic;
 
-    $pic = MMGraphic->new( '/tmp/photo.jpg' );
-    $frame = MMGraphic->new( '/tmp/frame.png' );
+  $pic = MMGraphic->new( '/tmp/photo.jpg' );
+  $frame = MMGraphic->new( '/tmp/frame.png' );
 
-    $framed = $pic->composite( graphic => $frame, opacity => 90 );
+  $framed = $pic->composite( graphic => $frame, opacity => 90 );
 
-    $framed->save_image( '/tmp/framed_photo.png' );
+  $framed->save_image( '/tmp/framed_photo.png' );
 
 =head1 DESCRIPTION
 
@@ -52,18 +51,18 @@ Please see http://www.imagemagick.org/ for details.
 
 As well as L<Moose>'s standard constructor:
 
-    $graphic = MMGraphic->new( image => '/path/to/image.jpg' );
+  $graphic = MMGraphic->new( image => '/path/to/image.jpg' );
 
 the module supports a shorter version
 
-    $graphic = MMGraphic->new( '/path/to/image.jpg' );
+  $graphic = MMGraphic->new( '/path/to/image.jpg' );
 
 Object references passed into the cosntructor are always
 cloned from during instantiation. If, for some reason, you
 want to cross-link multiple B<MMGraphic> objects to have
 the same underlying L<MMGraphic::Image> and/or L<Image::Magick>
 reference, you can achieve that by setting the C<image> accessor
-directly.
+after instantiation.
 
 =cut
 
@@ -102,17 +101,30 @@ around BUILDARGS => sub {
 
 A L<MMGraphic::Image> wrapper object to L<Image::Magic>.
 
-You can set the value using a scalar file path, or another B<MMGraphic> object
-(for both of these cases, B<MMGraphic> creates a new L<Image::Magick> object).
+The attribute must be provided on instantiation. When
+setting it, B<MMGraphic> will coerce from a variety
+of image references:
 
-I<Warning>! B<MMGraphic> does not check for multiple references to the same
-L<MMGraphic::Image> object. Unpredictable things may happen if you instantiate
-multiple B<MMGraphic> objects with the exact same L<MMGraphic::Image> object and
-then process them differently.
+=over
 
-If you want to have multiple B<MMGraphic> objects initialised from the same base
-image, you can avoid this issue by using constructor options of scalar file paths or
-MMGraphic objects. Alternatively, you can make use of the C<clone> method.
+=item B<*>
+
+An object of this class, B<MMGraphic>
+
+=item B<*>
+
+An object of the L<MMGraphic::Image> class.
+
+=item B<*>
+
+An object of the L<Image::Magick> class
+
+=item B<*>
+
+A scalar path to an image file (which B<MMGraphic> will load
+using L<Image::Magick>'s C<Read> method).
+
+=back
 
 =cut
 
@@ -277,21 +289,16 @@ method composite (
         my $temp_mask_im = $result_layer_im->Clone;
         $temp_mask_im->Color( "rgb($opacity\%, $opacity\%, $opacity\%)" );
         $temp_mask_im->Set(alpha=>"Off");
-        croak($r) if $r;
 
         my $combined_mask = $result_layer_im->Clone;
         croak($r) if $r;
 
-        $r = $combined_mask->Separate( channel => 'Opacity' );
-        croak($r) if $r;
-
-        $r = $combined_mask->Negate();
-        croak($r) if $r;
+        $combined_mask->Separate( channel => 'Opacity' );
+        $combined_mask->Negate();
 
         $combined_mask->Composite( image => $temp_mask_im, compose => 'Multiply' );
 
         $combined_mask->Set(alpha=>"Off");
-        croak($r) if $r;
 
         $result_layer_im->Composite( image => $combined_mask, compose => 'CopyOpacity'  );
 
@@ -371,7 +378,6 @@ method emboss (
     my $result_im = $self->image->Clone();
 
     $r = $result_im->Set( 'virtual-pixel' => 'Tile' );
-    croak($r) if $r;
 
     $r = $result_im->Blur( sigma => $blur  );
     croak($r) if $r;
@@ -391,11 +397,9 @@ method emboss (
 
     if ( $valley_darken ) {
         my $valley_mask_im = $self->image->Clone();
-        $r = $valley_mask_im->Set( 'virtual-pixel' => 'Tile' );
-        croak($r) if $r;
+        $valley_mask_im->Set( 'virtual-pixel' => 'Tile' );
 
-        $r = $valley_mask_im->Negate();
-        croak($r) if $r;
+        $valley_mask_im->Negate();
 
         $r = $valley_mask_im->Blur( sigma => $valley_blur );
         croak($r) if $r;
@@ -457,45 +461,35 @@ method apply_mask (
     Bool :$negate,
     Num :$feather = 0
     ) {
+    # Fetch base mask data
     my $mask_im = $graphic->Clone();
-
     if ( $use_alpha ) {
-        $r = $mask_im->Separate( channel => 'Opacity' );
-        croak($r) if $r;
-        $r = $mask_im->Negate();
-        croak($r) if $r;
+        # Opacity in Image::Magick is in opposite sense to alpha
+        $mask_im->Separate( channel => 'Opacity' );
+        $mask_im->Negate();
     } else {
         $mask_im->Set(alpha=>"Off");
-        croak($r) if $r;
     }
 
+    # Apply Negation and "feathering" as per input params
     if ($negate) {
-        $r = $mask_im->Negate();
-        croak($r) if $r;
+        $mask_im->Negate();
     }
-
     if ($feather) {
         $r = $mask_im->Blur( sigma => $feather );
         croak($r) if $r;
     }
 
+    # We may be masking over a 4-channel image including Opacity. By default
+    # Image::Magick ignores this. But we work around it here, to be more DWIM
     # Create a combined mask which multiplies both sets of alpha channels
     #     Mask from $this_image is greyscale of alpha channel
-    #     Mask from $mask is either as supplied or an extract of the alpha channel
-
+    #     Mask from $mask is as calculated above
     my $combined_mask = $self->image->Clone;
-    croak($r) if $r;
-
-    $r = $combined_mask->Separate( channel => 'Opacity' );
-    croak($r) if $r;
-
-    $r = $combined_mask->Negate();
-    croak($r) if $r;
-
+    $combined_mask->Separate( channel => 'Opacity' );
+    $combined_mask->Negate();
     $combined_mask->Composite( image => $mask_im, compose => 'Multiply' );
-
     $combined_mask->Set(alpha=>"Off");
-    croak($r) if $r;
 
     my $result_im = $self->image->Clone;
 
@@ -579,12 +573,9 @@ method drop_shadow (
 
     # Create shadow mask based on object's opacity
     $sm = $orig->Clone();
-    $r = $sm->Separate( channel => 'Opacity' );
-    croak($r) if $r;
-    $r = $sm->Negate();
-    croak($r) if $r;
+    $sm->Separate( channel => 'Opacity' );
+    $sm->Negate();
     $r = $sm->Set( 'virtual-pixel' => 'Edge' );
-    croak($r) if $r;
 
     # Enlarge shadow mask by blurring and applying strong contrast
     $r = $sm->Blur( sigma => $enlarge );
@@ -826,12 +817,10 @@ sub _offset_points {
 sub _image_rect {
     my ($w, $h, $fill ) = @_;
     $fill ||= 'NULL:transparent';
-    my $blank = Image::Magick->new();
+    my $blank = MMGraphic::Image->new();
     $blank->Set( size => "${w}x${h}" );
     $r = $blank->ReadImage( $fill );
-    croak($r) if $r;
-    $r = $blank->Set( "background", "rgba(255,255,255,0)" );
-    croak($r) if $r;
+    $r = $blank->Set( background => "rgba(255,255,255,0)" );
     return $blank;
 }
 
