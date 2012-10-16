@@ -76,9 +76,9 @@ around BUILDARGS => sub {
 
     if ( @_ == 1 ) {
         my $image = $_[0];
-        if ( $image->can('clone') ) {
+        if ( ref($image) && $image->can('clone') ) {
             $image = $image->clone();
-        } elsif ( $image->can('Clone') ) {
+        } elsif ( ref($image) && $image->can('Clone') ) {
             $image = $image->Clone();
         }
         return $class->$orig( image => $image );
@@ -86,9 +86,9 @@ around BUILDARGS => sub {
     else {
         my %args = @_;
         my $image = $args{image};
-        if ( $image->can('clone') ) {
+        if ( ref($image) && $image->can('clone') ) {
             $args{image} = $image->clone();
-        } elsif ( $image->can('Clone') ) {
+        } elsif ( ref($image) && $image->can('Clone') ) {
             $args{image} = $image->Clone();
         }
         return $class->$orig( %args );
@@ -376,20 +376,13 @@ method emboss (
     Num :$valley_blur = 5
     ) {
     my $result_im = $self->image->Clone();
-
-    $r = $result_im->Set( 'virtual-pixel' => 'Tile' );
-
-    $r = $result_im->Blur( sigma => $blur  );
-    croak($r) if $r;
-
-    $r = $result_im->Shade( geometry => $theta . 'x21.78', gray => 'true' );
-    croak($r) if $r;
-
-    $r = $result_im->ContrastStretch( '0%' );
-    croak($r) if $r;
-
-    $r = $result_im->SigmoidalContrast( 'mid-point' => 0.5 * $result_im->QuantumRange, contrast => $contrast );
-    croak($r) if $r;
+    $result_im->Set( 'virtual-pixel' => 'Tile' );
+    $result_im->Blur( sigma => $blur  );
+    
+    # The main lighting effect for emboss
+    $result_im->Shade( geometry => $theta . 'x21.78', gray => 'true' );
+    $result_im->ContrastStretch( '0%' );
+    $result_im->SigmoidalContrast( 'mid-point' => 0.5, contrast => $contrast );
 
     my $opacity = int( 100 - $mix ) . '%';
     $r = $result_im->Colorize( fill => 'grey50', opacity => $opacity );
@@ -398,11 +391,8 @@ method emboss (
     if ( $valley_darken ) {
         my $valley_mask_im = $self->image->Clone();
         $valley_mask_im->Set( 'virtual-pixel' => 'Tile' );
-
         $valley_mask_im->Negate();
-
-        $r = $valley_mask_im->Blur( sigma => $valley_blur );
-        croak($r) if $r;
+        $valley_mask_im->Blur( sigma => $valley_blur );
 
         my $valley_darken_im = $self->image->Clone();
         $r = $valley_darken_im->Colorize( fill => 'black', opacity => '100%' );
@@ -476,8 +466,7 @@ method apply_mask (
         $mask_im->Negate();
     }
     if ($feather) {
-        $r = $mask_im->Blur( sigma => $feather );
-        croak($r) if $r;
+        $mask_im->Blur( sigma => $feather );
     }
 
     # We may be masking over a 4-channel image including Opacity. By default
@@ -575,15 +564,11 @@ method drop_shadow (
     $sm = $orig->Clone();
     $sm->Separate( channel => 'Opacity' );
     $sm->Negate();
-    $r = $sm->Set( 'virtual-pixel' => 'Edge' );
+    $sm->Set( 'virtual-pixel' => 'Edge' );
 
-    # Enlarge shadow mask by blurring and applying strong contrast
-    $r = $sm->Blur( sigma => $enlarge );
-    croak($r) if $r;
-    $r = $sm->SigmoidalContrast(
-        'mid-point' => 0.2 * $sm->QuantumRange,
-        contrast => 100 );
-    croak($r) if $r;
+    # Enlarge the shadow mask by blurring it and applying strong contrast
+    $sm->Blur( sigma => $enlarge );
+    $sm->SigmoidalContrast( 'mid-point' => 0.2, contrast => 100 );
 
     # Reduce shadow strength
     my $darken_opacity = int( 100 - $opacity ) . '%';
@@ -720,7 +705,7 @@ sub _matching_layer {
 
 #####################################################################################
 #
-#  Utils.
+#  Utils. TODO: Move these into e.g. MMGraphic::Geometry
 #
 
 sub _assert_points_array {
@@ -820,14 +805,14 @@ sub _image_rect {
     my $blank = MMGraphic::Image->new();
     $blank->Set( size => "${w}x${h}" );
     $r = $blank->ReadImage( $fill );
-    $r = $blank->Set( background => "rgba(255,255,255,0)" );
+    $blank->Set( background => "rgba(255,255,255,0)" );
     return $blank;
 }
 
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2011 Neil SLATER.
+Copyright 2012 Neil SLATER.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published

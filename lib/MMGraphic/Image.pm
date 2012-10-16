@@ -29,14 +29,15 @@ MMGraphic::Image - Wraps Image::Magick with more Moose-y behaviour
 B<MMGraphic::Image> is a Moose-y wrapper for L<Image::Magick>. It provides a
 small subset of L<Image::Magick>'s full behaviour.
 
-If you need to access a non-exposed L<Image::Magick> feature within a method
-that is not documented here, or one that has been over-ridden by B<MMGraphic::Image>,
-i.e. documented below, but that might have an additional parameter you need to use,
-then you can. Simply access the C<image> property, which is the underlying
-L<Image::Magick> object, and call the method directly on that:
+You may need to access a non-exposed L<Image::Magick> feature within a method
+that is not documented here. Or perhaps need to access a method that has been
+over-ridden by B<MMGraphic::Image>, i.e. documented below, but that has an 
+additional parameter you need to use. To do so, simply access the C<image>
+property, which is the underlying L<Image::Magick> object, and call the 
+method you need directly on that:
 
-    my $result = $mmg_image->image->Mogrify( ... );
-    croak($result) if $result;
+  my $result = $mmg_image->image->Mogrify( ... );
+  croak($result) if $result;
 
 =head1 ATTRIBUTES
 
@@ -60,8 +61,7 @@ has 'image' => (
     default => sub { Image::Magick->new();},
     coerce => 1,
     handles => [qw(
-        Blur
-        Shade ContrastStretch SigmoidalContrast QuantumRange
+        QuantumRange
         Colorize Crop Draw Get ReadImage Compare
     )],
 );
@@ -98,10 +98,47 @@ A scalar path to an image file (loaded using L<Image::Magick>'s C<Read> method).
 
 =back
 
+=head2 Blur
+
+Averages between pixels that are close together, visually softening the
+image.
+
+Returns: Nothing.
+
+Parameters:
+
+=over
+
+=item B<sigma>
+
+Feature size of the blur effect, as a numeric distance (in pixels).
+Mathematically this is related to a Gaussian used to share each pixel
+value with its neighbours.
+
+=back
+
+Blur results close to the image edges are affected by
+the C<virtual-pixel> image property.
+
+=cut
+
+method Blur (
+    Num :$sigma!
+    ) {
+    _imtry {
+        $self->image->Blur(
+            sigma => $sigma
+        );
+    };
+    return;
+}
+
 =head2 Clone
 
 Returns a copy of the current object, containing a copy of the
 Image::Magick image.
+
+Parameters: None
 
 =cut
 
@@ -113,6 +150,11 @@ method Clone {
 
 All pixels in the image are set to C<$mmg_color>, which is a string
 color description suitable for L<Image::Magick>.
+
+Returns: Nothing.
+
+Parameter: Takes a single scalar value, which must describe a color
+choice available in L<Image::Magick>.
 
 =cut
 
@@ -187,6 +229,27 @@ method Composite (
     return;
 }
 
+=head2 ContrastStretch( $amount )
+
+Increases or decreases variance in value/brightness.
+
+Parameter: scalar amount, e.g. C<'0%'>
+
+Returns: Nothing.
+
+=cut
+
+# TODO: Better understanding and description required
+
+method ContrastStretch (
+    Str $amount
+    ) {
+    _imtry {
+        $self->image->ContrastStretch( $amount );
+    };
+    return;
+}
+
 =head2 Negate( )
 
 Inverts all image channels except Opacity, creating an
@@ -197,8 +260,6 @@ Parameters: None
 Returns: Nothing
 
 =cut
-
-# TODO: Enumerate allowed channel names, add remaining params
 
 method Negate () {
     _imtry {
@@ -271,6 +332,88 @@ sub Set {
     return;
 }
 
+=head2 Shade( geometry => '<angle1>x<angle2>', gray => 'true' )
+
+Turns image into a height map and simulates a parallel light
+source shining on it.
+
+Parameters:
+
+=over
+
+=item B<geometry>
+
+A string of form C<< <angle1>x<angle2> >>, where the first angle
+is anti-clockwise degrees from positive x axis, and second angle
+is elevation.
+
+=item B<gray>
+
+An optional string. If provided with value "true", calculates
+height field using a gray value calculation.
+
+=back
+
+=cut
+
+# TODO: Handle geometry better, confirm grayness algorithm and alternatives
+
+method Shade (
+    Str :$geometry!,
+    Str :$gray
+    ){
+    _imtry {
+        $self->image->Shade(
+            geometry => $geometry,
+            $gray ? ( gray => $gray ) : (),
+        );
+    };
+    return;
+}
+
+=head2 SigmoidalContrast( 'mid-point' => 0.5 , contrast => $contrast )
+
+Alters contrast on image by applying an S-shaped curve that maps the 
+old value to new value. With a low contrast value, the 
+
+Parameters:
+
+=over
+
+=item B<mid-point>
+
+The current gray value that will be turned into a mid-gray by the contrast
+effect. The value C<0.5> is 50% gray - this differs from L<Image::Magick>
+which takes channel value e.g. 128 or 2000000, which will behave differently
+for 8-bit and 16-bit Image::Magick libraries.
+
+=item B<contrast>
+
+Contrast effect. Values below 1 reduce contrast with a flat curve. Higher
+values have a more S-shaped curve. Very high values are effectively a vertical
+line through the C<mid-point> value.
+
+=back
+
+Returns: Nothing.
+
+=cut
+
+# TODO: Handle geometry better, confirm grayness algorithm and alternatives
+
+sub SigmoidalContrast {
+    my ($self, %params) = @_;
+    my $mid_point = $params{'mid-point'} || croak "Missing parameter 'mid-point'";
+    my $contrast = $params{'contrast'} || croak "Missing parameter 'contrast'";
+    _imtry {
+        $self->image->SigmoidalContrast(
+            'mid-point' => $mid_point * $self->QuantumRange,
+            contrast => $contrast,
+        );
+    };
+    return;
+}
+
 =head2 Write( $file_name )
 
 Stores image in named file. Uses the file extension
@@ -303,7 +446,7 @@ sub _imtry(&) {
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2011 Neil SLATER.
+Copyright 2012 Neil SLATER.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published

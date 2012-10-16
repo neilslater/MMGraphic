@@ -4,6 +4,7 @@ use warnings;
 use Moose::Util::TypeConstraints;
 use Image::Magick;
 use namespace::autoclean;
+use Carp qw(croak);
 
 my $r; # To hold Image::Magick responses
 
